@@ -1,0 +1,32 @@
+[build-system]
+requires = ["pdm-backend"]
+build-backend = "pdm.backend"
+
+[project]
+name = "picoolfx"
+version = "0.1.1"
+authors = [
+  { name="Nicola Cerutti", email="nc@nicores.de" },
+]
+description = "A small package that applies nice effects to images"
+readme = "README.md"
+requires-python = ">=3.7"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "geopandas",
+    "matplotlib",
+    "noise",
+    "numpy",
+    "pandas",
+    "Pillow",
+    "rasterio",
+    "Shapely",]
+
+
+[project.urls]
+"Homepage" = "https://github.com/ncerutti/picoolfx"
+"Bug Tracker" = "https://github.com/ncerutti/picoolfx/issues"
