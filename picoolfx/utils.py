@@ -2,12 +2,14 @@
 #
 from typing import List, Optional, Union
 import geopandas as gpd
+import io
 import noise
 import numpy as np
 import pandas as pd
 from PIL import Image, ImageOps
 import rasterio
 import rasterio.features
+from rasterio.io import MemoryFile
 from shapely.geometry import LineString, shape
 
 
@@ -50,23 +52,6 @@ def buffered_intersections(
         return intersections
     else:
         return None
-
-
-def check_image(img: Image.Image) -> bool:
-    """Checks if the image is a square
-
-    Args:
-        img (Image): PIL image
-
-    Returns:
-        bool: True if the image is a square, False otherwise
-    """
-    if img is None:
-        return False
-    width, height = img.size
-    if width != height:
-        return False
-    return True
 
 
 def coords_to_gdf_spiral(coords: Union[pd.DataFrame, List[tuple]]) -> gpd.GeoDataFrame:
@@ -232,50 +217,21 @@ def polygony(image: Image.Image, rescaler_factor: float = 1.0) -> gpd.GeoDataFra
         List[Polygon]: List of polygons.
     """
     image = image.transpose(Image.FLIP_TOP_BOTTOM)
-    image.save("test2.png")
-    with rasterio.open("test2.png") as src:
-        red_band = src.read(1)
-        # rescaled_red_band = 1 - (red_band - red_band.min()) / (
-        #     red_band.max() - red_band.min()
-        # )
-        rescaled_red_band = rescaler_factor - (red_band - red_band.min()) / (
-            red_band.max() - red_band.min()
-        )
-    i_sf = raster_to_geodataframe(src, rescaled_red_band)
+
+    with io.BytesIO() as image_buffer:
+        image.save(image_buffer, format="png")
+        image_buffer.seek(0)
+        with MemoryFile(image_buffer) as memfile:
+            with memfile.open() as dataset:
+                red_band = dataset.read(1)
+                # rescaled_red_band = 1 - (red_band - red_band.min()) / (
+                #     red_band.max() - red_band.min()
+                # )
+                rescaled_red_band = rescaler_factor - (red_band - red_band.min()) / (
+                    red_band.max() - red_band.min()
+                )
+                i_sf = raster_to_geodataframe(dataset, rescaled_red_band)
     return i_sf
-
-
-def prepare_image(
-    img: Image.Image, size: int, shades: int, crop=False, invert=False
-) -> Image.Image:
-    """_summary_
-
-    Args:
-        img (PIL image): input image
-        size (int): target size
-        shades (int): number of shades
-        crop (bool, optional): Should the image be cropped instead of resized? Defaults to False.
-        invert (bool, optional): Should the image be inverted? Defaults to False.
-
-    Returns:
-        i (PIL image): black and white, quantized, resized image
-    """
-    if crop:
-        width, height = img.size
-        if width < size or height < size:
-            raise ValueError("Image is too small to crop")
-        left = (width - size) // 2
-        top = (height - size) // 2
-        right = (width + size) // 2
-        bottom = (height + size) // 2
-        i = img.crop((left, top, right, bottom))
-    else:
-        i = img.resize((size, size))
-    i = i.quantize(shades)
-    i = i.convert("L")
-    if invert:
-        i = ImageOps.invert(i)
-    return i
 
 
 def raster_to_geodataframe(

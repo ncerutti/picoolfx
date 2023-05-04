@@ -8,18 +8,32 @@ __version__ = "0.1.0"
 import io
 import matplotlib.pyplot as plt
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageOps
 import geopandas as gpd
 from shapely.geometry import LineString
 from .utils import (
     buffered_intersections,
-    check_image,
     coords_to_gdf_spiral,
     create_noise_matrix,
     flow_polygons,
     polygony,
     spiral_coords,
 )
+
+
+def check_image(img: Image.Image) -> bool:
+    """Checks if the image is a square
+
+    Args:
+        img (Image): PIL image
+
+    Returns:
+        bool: True if the image is a square, False otherwise
+    """
+    width, height = img.size
+    if width != height:
+        return False
+    return True
 
 
 def pixelate(image, pixel_size):
@@ -123,6 +137,39 @@ def spiralise(
     spiral_image = Image.open(buf)
     plt.close(fig)  # Close the figure to prevent it from being displayed
     return spiral_image
+
+
+def prepare_image(
+    img: Image.Image, size: int, shades: int, crop=False, invert=False
+) -> Image.Image:
+    """_summary_
+
+    Args:
+        img (PIL image): input image
+        size (int): target size
+        shades (int): number of shades
+        crop (bool, optional): Should the image be cropped instead of resized? Defaults to False.
+        invert (bool, optional): Should the image be inverted? Defaults to False.
+
+    Returns:
+        i (PIL image): black and white, quantized, resized image
+    """
+    if crop:
+        width, height = img.size
+        if width < size or height < size:
+            raise ValueError("Image is too small to crop")
+        left = (width - size) // 2
+        top = (height - size) // 2
+        right = (width + size) // 2
+        bottom = (height + size) // 2
+        i = img.crop((left, top, right, bottom))
+    else:
+        i = img.resize((size, size))
+    i = i.quantize(shades)
+    i = i.convert("L")
+    if invert:
+        i = ImageOps.invert(i)
+    return i
 
 
 # def double_spiral_function(
@@ -230,7 +277,7 @@ def spiralise(
 
 
 def flowalise(
-    input_image: None,
+    input_image: Image.Image,
     x_side=300,
     y_side=300,
     n_points=800,
@@ -243,6 +290,29 @@ def flowalise(
     alpha=1.0,
     colormap="none",
 ) -> Image.Image:
+    """
+    Creates a flow map effect on the input image using a (mostly) custom algorithm.
+
+    Args:
+        input_image (Optional[Image.Image], default=None): The input image to apply the effect to.
+        x_side (int, default=300): Width of the noise matrix.
+        y_side (int, default=300): Height of the noise matrix.
+        n_points (int, default=800): Number of starting points for the flow lines.
+        step_length (int, default=1): Length of each step in the flow lines.
+        n_steps (int, default=400): Number of steps to take for each flow line.
+        thin (float, default=0.0001): Minimum line width for the flow lines.
+        thick (float, default=0.25): Maximum line width for the flow lines.
+        rescaler_factor (float, default=1.0): Rescaling factor for the input image.
+        color (str, default="black"): Color of the flow lines.
+        alpha (float, default=1.0): Transparency of the flow lines.
+        colormap (str, default="none"): Colormap to use for coloring the flow lines.
+
+    Returns:
+        Image.Image: The input image with the flow map effect applied.
+
+    Raises:
+        ValueError: If input_image is None.
+    """
     if input_image is None:
         raise ValueError("No input image provided.")
     polygons_gdf = polygony(input_image, rescaler_factor=rescaler_factor)

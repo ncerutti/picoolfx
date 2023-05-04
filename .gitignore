@@ -134,3 +134,4 @@ output*
 *__pycache__*
 test.py
 .vscode/
+test_man.py
