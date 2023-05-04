@@ -1,4 +1,9 @@
-# Some photo effects
+Simple package used to apply nice effects to images.
+Can be installed using:
+pip install picoolfx
+"""
+import picoolfx
+
 
 I saw Chris Holmes' repo (https://github.com/cj-holmes/photos-on-spirals) of cool effects on pictures and I thought I would try and make a python version of it.
 
