@@ -130,7 +130,7 @@ dmypy.json
 
 # custom
 /tmp/
-*test*
 output*
 *__pycache__*
 test.py
+.vscode/
